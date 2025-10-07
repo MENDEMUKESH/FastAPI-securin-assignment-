@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recipe Explorer</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>Recipe Explorer</h1>
+        
+        <form id="search-form">
+            <input type="text" id="search" placeholder="Search recipes..." />
+            
+            <label for="sort_by">Sort by:</label>
+            <select id="sort_by">
+                <option value="rating">Rating</option>
+                <option value="total_time">Total Time</option>
+                <option value="title">Title</option>
+            </select>
+
+            <label for="order">Order:</label>
+            <select id="order">
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+            </select>
+
+            <button type="submit">Search</button>
+        </form>
+
+        <div id="recipes-list"></div>
+
+        <div class="pagination">
+            <button id="prev-page" disabled>Previous</button>
+            <span id="page-info">Page 1</span>
+            <button id="next-page">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('search-form');
+        const recipesList = document.getElementById('recipes-list');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+
+        let currentPage = 1;
+        const perPage = 5;
+
+        async function fetchRecipes() {
+            const search = document.getElementById('search').value;
+            const sortBy = document.getElementById('sort_by').value;
+            const order = document.getElementById('order').value;
+
+            const params = new URLSearchParams({
+                search: search || '',
+                sort_by: sortBy,
+                order: order,
+                page: currentPage,
+                per_page: perPage
+            });
+
+            const response = await fetch('/recipes?' + params.toString());
+            const data = await response.json();
+            displayRecipes(data);
+            pageInfo.textContent = `Page ${currentPage}`;
+
+            // Enable/disable prev button
+            prevBtn.disabled = currentPage === 1;
+            // Disable next if fewer than per_page results returned (no more pages)
+            nextBtn.disabled = data.length < perPage;
+        }
+
+        function displayRecipes(recipes) {
+            if (recipes.length === 0) {
+                recipesList.innerHTML = '<p>No recipes found.</p>';
+                return;
+            }
+
+            recipesList.innerHTML = recipes.map(recipe => `
+                <div class="recipe-card">
+                    <h3>${recipe.title}</h3>
+                    <p><strong>Cuisine:</strong> ${recipe.cuisine || 'N/A'}</p>
+                    <p><strong>Rating:</strong> ${recipe.rating || 'N/A'}</p>
+                    <p><strong>Total Time:</strong> ${recipe.total_time || 'N/A'} minutes</p>
+                    <p>${recipe.description || ''}</p>
+                    <a href="${recipe.url}" target="_blank">View Recipe</a>
+                </div>
+            `).join('');
+        }
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            currentPage = 1; // reset page on new search
+            fetchRecipes();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchRecipes();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentPage++;
+            fetchRecipes();
+        });
+
+        // Initial load
+        fetchRecipes();
+    </script>
+</body>
+</html>
